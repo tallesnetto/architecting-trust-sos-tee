@@ -52,7 +52,7 @@ pip install -r requirements.txt
 
 python -m unittest discover -s tests -t . -v    # 10 tests, about 2 s
 python -m examples.quickstart                   # a short guided example
-python -m experiments.run_all                   # all experiments of the paper, about 10 s
+python -m experiments.run_all                   # all experiments of the paper, about 5 min
 ```
 
 All commands must be run from the root of the repository, because the packages
@@ -245,9 +245,11 @@ each scenario with several seeds:
 python -m experiments.e1_threats --trials 30
 ```
 
-E2 timings depend on the machine and its load. To keep drift from favoring one
-configuration, the two configurations are interleaved exchange by exchange and
-the garbage collector is paused while timing. Absolute values will differ from
+E2 timings depend on the machine and its load. The measurement is repeated in
+5 independent runs of 300 exchanges per size, and the report takes the median
+of each run and then the median across runs. Within a run, the two
+configurations are interleaved exchange by exchange, so that drift affects both
+alike, and the garbage collector is paused while timing. Absolute values will differ from
 the paper; the relative difference between baseline and full model is what the
 paper discusses.
 
@@ -255,7 +257,7 @@ paper discusses.
 
 ```bash
 python -m experiments.e1_threats --all-configs   # also runs the full model with each decision switched off
-python -m experiments.e2_overhead --records 1000 # more exchanges per size
+python -m experiments.e2_overhead --blocks 10     # more independent runs
 python -m experiments.e3_interval                # detection latency and cost for several intervals T
 ```
 

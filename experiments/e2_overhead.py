@@ -1,9 +1,11 @@
 """E2: time per record exchange, record size on the wire and channel setup time.
 
-The baseline and the full model are interleaved exchange by exchange, and the
-garbage collector is paused while timing.
+The measurement is repeated in independent blocks. Within a block, the baseline
+and the full model are interleaved exchange by exchange and the garbage
+collector is paused while timing. The report takes the median of each block and
+then the median across blocks.
 
-    python -m experiments.e2_overhead [--records N] [--warmup N] [--handshakes N]
+    python -m experiments.e2_overhead [--blocks N] [--records N] [--warmup N] [--handshakes N]
 """
 import argparse
 import gc
@@ -24,12 +26,12 @@ def _timed(fn):
     return result, (time.perf_counter_ns() - t0) / 1000
 
 
-def run(records: int = 100, warmup: int = 10, n_handshakes: int = 30) -> None:
-    order = rng_for("E2-order")
+def _block(block, records, warmup, n_handshakes):
+    order = rng_for("E2-order", block)
     cells = {}
     for name in CONFIGS:
         for size, make in fhir.SIZES.items():
-            rng = rng_for("E2", name, size)
+            rng = rng_for("E2", name, size, block)
             sos = HealthSoS(ABLATIONS[name])
             sos.connect("hospital", "lab")
             cells[(name, size)] = (sos, [make(rng, fhir.patient(rng)) for _ in range(warmup + records)])
@@ -47,7 +49,7 @@ def run(records: int = 100, warmup: int = 10, n_handshakes: int = 30) -> None:
                 result, us = _timed(lambda: sos["lab"].send(sos["hospital"], payloads[i]))
                 assert result["accepted"], result
                 if i >= warmup:
-                    rows.append({"config": name, "size": size, "i": i - warmup, "latency_us": us,
+                    rows.append({"block": block, "config": name, "size": size, "i": i - warmup, "latency_us": us,
                                  "wire_bytes": len(sos.network.capture[-1]),
                                  "payload_bytes": len(crypto.canonical(payloads[i]))})
             if i % 10 == 9:
@@ -58,18 +60,28 @@ def run(records: int = 100, warmup: int = 10, n_handshakes: int = 30) -> None:
             for name in names:
                 ok, us = _timed(lambda: links[name].connect("hospital", "lab"))
                 if i:
-                    hs_rows.append({"config": name, "i": i - 1, "ok": int(ok), "latency_us": us})
+                    hs_rows.append({"block": block, "config": name, "i": i - 1, "ok": int(ok), "latency_us": us})
     finally:
         gc.enable()
-    print("E2 done", flush=True)
+    return rows, hs_rows
+
+
+def run(blocks: int = 5, records: int = 300, warmup: int = 20, n_handshakes: int = 30) -> None:
+    rows, hs_rows = [], []
+    for block in range(blocks):
+        r, h = _block(block, records, warmup, n_handshakes)
+        rows += r
+        hs_rows += h
+        print(f"E2 block {block + 1}/{blocks} done", flush=True)
     write_csv("e2_exchange.csv", rows)
     write_csv("e2_handshake.csv", hs_rows)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--records", type=int, default=100)
-    parser.add_argument("--warmup", type=int, default=10)
+    parser.add_argument("--blocks", type=int, default=5)
+    parser.add_argument("--records", type=int, default=300)
+    parser.add_argument("--warmup", type=int, default=20)
     parser.add_argument("--handshakes", type=int, default=30)
     a = parser.parse_args()
-    run(a.records, a.warmup, a.handshakes)
+    run(a.blocks, a.records, a.warmup, a.handshakes)

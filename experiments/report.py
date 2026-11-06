@@ -60,21 +60,26 @@ def e1(macros):
     macros += [_macro("EOneRuns", len(rows)), _macro("EOneScenarios", len(SCENARIO_ROWS))]
 
 
+def _block_median(rows, key, value):
+    per_block = collections.defaultdict(list)
+    for r in rows:
+        per_block[(key(r), r["block"])].append(value(r))
+    out = collections.defaultdict(list)
+    for (k, _), v in per_block.items():
+        out[k].append(statistics.median(v))
+    return {k: statistics.median(v) for k, v in out.items()}
+
+
 def e2(macros):
     rows = read_csv("e2_exchange.csv")
-    lat = collections.defaultdict(list)
-    wire = collections.defaultdict(list)
-    payload = collections.defaultdict(list)
-    for r in rows:
-        lat[(r["config"], r["size"])].append(float(r["latency_us"]))
-        wire[(r["config"], r["size"])].append(int(r["wire_bytes"]))
-        payload[r["size"]].append(int(r["payload_bytes"]))
-    hs = collections.defaultdict(list)
-    for r in read_csv("e2_handshake.csv"):
-        hs[r["config"]].append(float(r["latency_us"]))
+    hs_rows = read_csv("e2_handshake.csv")
+    cell = lambda r: (r["config"], r["size"])
+    med = _block_median(rows, cell, lambda r: float(r["latency_us"]))
+    mwire = _block_median(rows, cell, lambda r: int(r["wire_bytes"]))
+    payload = _block_median(rows, lambda r: r["size"], lambda r: int(r["payload_bytes"]))
+    hs = _block_median(hs_rows, lambda r: r["config"], lambda r: float(r["latency_us"]))
+    blocks = len({r["block"] for r in rows})
 
-    med = {k: statistics.median(v) for k, v in lat.items()}
-    mwire = {k: statistics.median(v) for k, v in wire.items()}
     lines = [r"\begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}}lrrrrrrr@{}}", r"\toprule",
              r" & \multicolumn{3}{c}{Time per record (ms)} & \multicolumn{3}{c}{Size on the wire (KiB)}"
              r" & Channel \\",
@@ -83,22 +88,25 @@ def e2(macros):
     for c in CONFIGS:
         cells = [f"{med[(c, s)] / 1000:.2f}" for s in SIZES]
         cells += [f"{mwire[(c, s)] / 1024:.1f}" for s in SIZES]
-        cells.append(f"{statistics.median(hs[c]) / 1000:.2f}")
+        cells.append(f"{hs[c] / 1000:.2f}")
         lines.append(LABELS[c] + " & " + " & ".join(cells) + r" \\")
     lines += [r"\bottomrule", r"\end{tabular*}"]
     _write("e2_table.tex", "\n".join(lines) + "\n")
 
     for s in SIZES:
         name = {"S": "Small", "M": "Medium", "L": "Large"}[s]
-        macros += [_macro(f"Payload{name}KiB", f"{statistics.median(payload[s]) / 1024:.1f}"),
-                   _macro(f"Full{name}ms", f"{med[('FULL', s)] / 1000:.2f}"),
-                   _macro(f"Base{name}ms", f"{med[('B0', s)] / 1000:.2f}"),
-                   _macro(f"Delta{name}ms", f"{(med[('FULL', s)] - med[('B0', s)]) / 1000:.2f}"),
+        base, full = med[("B0", s)], med[("FULL", s)]
+        macros += [_macro(f"Payload{name}KiB", f"{payload[s] / 1024:.1f}"),
+                   _macro(f"Full{name}ms", f"{full / 1000:.2f}"),
+                   _macro(f"Base{name}ms", f"{base / 1000:.2f}"),
+                   _macro(f"Delta{name}ms", f"{(full - base) / 1000:.1f}"),
+                   _macro(f"Rel{name}pct", f"{100 * (full - base) / base:.0f}"),
                    _macro(f"Wire{name}Extra", f"{(mwire[('FULL', s)] - mwire[('B0', s)]) / 1024:.1f}")]
-    macros += [_macro("HandshakeFullms", f"{statistics.median(hs['FULL']) / 1000:.2f}"),
-               _macro("HandshakeBasems", f"{statistics.median(hs['B0']) / 1000:.2f}"),
-               _macro("ETwoRecords", len(lat[("FULL", "S")])),
-               _macro("ETwoHandshakes", len(hs["FULL"]))]
+    macros += [_macro("HandshakeFullms", f"{hs['FULL'] / 1000:.2f}"),
+               _macro("HandshakeBasems", f"{hs['B0'] / 1000:.2f}"),
+               _macro("ETwoBlocks", blocks),
+               _macro("ETwoRecords", len(rows) // (blocks * len(CONFIGS) * len(SIZES))),
+               _macro("ETwoHandshakes", len(hs_rows) // (blocks * len(CONFIGS)))]
 
 
 def main():
