@@ -1,0 +1,17 @@
+scenario,config,trial,harm,details
+CUI1,B0,0,1,{}
+CUI1,FULL,0,0,{}
+CUI2,B0,0,1,"{""leaked_fraction"": 1.0}"
+CUI2,FULL,0,0,"{""leaked_fraction"": 0.0}"
+CUI3a,B0,0,0,"{""mode"": ""bitflip""}"
+CUI3a,FULL,0,0,"{""mode"": ""bitflip""}"
+CUI3b,B0,0,1,{}
+CUI3b,FULL,0,0,{}
+CUI3c,B0,0,1,{}
+CUI3c,FULL,0,0,{}
+CUI4,B0,0,1,"{""accepted_after"": 90}"
+CUI4,FULL,0,0,"{""accepted_after"": 20}"
+CUI5,B0,0,1,{}
+CUI5,FULL,0,0,{}
+EV1,B0,0,0,"{""rejected_after"": 0}"
+EV1,FULL,0,0,"{""rejected_after"": 0}"
