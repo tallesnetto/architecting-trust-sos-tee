@@ -28,8 +28,7 @@ table and number reported in the paper.
 6. [Reproducing the experiments of the paper](#reproducing-the-experiments-of-the-paper)
 7. [Using the library](#using-the-library)
 8. [What is simulated and what is not](#what-is-simulated-and-what-is-not)
-9. [Extending the PoC](#extending-the-poc)
-10. [Citation and license](#citation-and-license)
+9. [Citation and license](#citation-and-license)
 
 ---
 
