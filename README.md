@@ -334,22 +334,6 @@ All the data are **synthetic**; no real patient data is used or included.
 
 ---
 
-## Extending the PoC
-
-* **New misuse case.** Write a function `my_case(cfg, rng) -> {"success": bool, ...}`
-  in `sostee/scenarios.py` that builds a `HealthSoS(cfg)`, modifies one component
-  (often by passing a subclass of `TrustedGatewayApp` through `app_classes`, as
-  in `variants.py`) and reports whether the harm happened. Add it to `SCENARIOS`;
-  E1 will run it automatically. To include it in the paper table, add a row to
-  `SCENARIO_ROWS` in `experiments/report.py`.
-* **New architectural decision.** Add a flag to `Config`, check it in the
-  trusted application, and add an entry to `ABLATIONS`.
-* **Another domain.** Replace `INSTITUTIONS` in `sos.py` and the resource
-  generators in `fhir.py`; the trusted application only signs, encrypts and
-  checks generic JSON resources.
-
----
-
 ## Citation and license
 
 ### Authors
