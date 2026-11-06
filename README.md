@@ -358,3 +358,7 @@ All the data are **synthetic**; no real patient data is used or included.
 * **Rafael Z. Frantz**, Unijuí University, Ijuí, Brazil (rzfrantz@unijui.edu.br)
 * **Mohamad Kassab**, University of Boston, Boston, USA (mkassab@bu.edu)
 * **Valdemar V. Graciano Neto**, Federal University of Goiás, Goiânia, Brazil (valdemarneto@ufg.br)
+
+### License
+
+This project is licensed under the MIT License. See [`LICENSE`](LICENSE) for details.
